@@ -1,0 +1,24 @@
+int8 rx
+int8 ry
+int8 lx
+int8 ly
+uint32 btn
+uint16 btnm
+
+bool a
+bool b
+bool x
+bool y
+bool up
+bool down
+bool left
+bool right
+bool lb
+bool rb
+bool lt
+bool rt
+bool l3
+bool r3
+bool shere
+bool chiken
+bool menu
