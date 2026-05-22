@@ -162,23 +162,23 @@ private:
             gp.btn = btn;
             gp.btnm = btnm;
 
-            gp.a = (btn & X5_A) != 0;
-            gp.b = (btn & X5_B) != 0;
-            gp.x = (btn & X5_X) != 0;
-            gp.y = (btn & X5_Y) != 0;
-            gp.shere = (btn & X5_SHERE) != 0;
-            gp.chiken = (btn & X5_CHIKEN) != 0;
-            gp.menu = (btn & X5_MENU) != 0;
-            gp.l3 = (btn & X5_L3) != 0;
-            gp.r3 = (btn & X5_R3) != 0;
-            gp.lb = (btn & X5_LB) != 0;
-            gp.rb = (btn & X5_RB) != 0;
-            gp.up = (btn & X5_UP) != 0;
-            gp.down = (btn & X5_DOWN) != 0;
-            gp.left = (btn & X5_LEFT) != 0;
-            gp.right = (btn & X5_RIGHT) != 0;
-            gp.lt = (btn & X5_LT) != 0;
-            gp.rt = (btn & X5_RT) != 0;
+            // gp.a = (btn & X5_A) != 0;
+            // gp.b = (btn & X5_B) != 0;
+            // gp.x = (btn & X5_X) != 0;
+            // gp.y = (btn & X5_Y) != 0;
+            // gp.shere = (btn & X5_SHERE) != 0;
+            // gp.chiken = (btn & X5_CHIKEN) != 0;
+            // gp.menu = (btn & X5_MENU) != 0;
+            // gp.l3 = (btn & X5_L3) != 0;
+            // gp.r3 = (btn & X5_R3) != 0;
+            // gp.lb = (btn & X5_LB) != 0;
+            // gp.rb = (btn & X5_RB) != 0;
+            // gp.up = (btn & X5_UP) != 0;
+            // gp.down = (btn & X5_DOWN) != 0;
+            // gp.left = (btn & X5_LEFT) != 0;
+            // gp.right = (btn & X5_RIGHT) != 0;
+            // gp.lt = (btn & X5_LT) != 0;
+            // gp.rt = (btn & X5_RT) != 0;
             
 
             cmd_pub_->publish(gp);
