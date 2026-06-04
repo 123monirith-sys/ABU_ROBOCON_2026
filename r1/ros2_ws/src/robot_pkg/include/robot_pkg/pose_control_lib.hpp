@@ -1,6 +1,7 @@
 #ifndef POSE_CONTROL_LIB_HPP
 #define POSE_CONTROL_LIB_HPP
 
+float wrapAngle(float angle);
 class PoseControl
 {
 public:
@@ -67,19 +68,6 @@ private:
     float ex_prev_;
     float ey_prev_;
     float et_prev_;
-
-    // =========================================================
-    // FILTERED OUTPUTS
-    // =========================================================
-    float vx_f_;
-    float vy_f_;
-    float w_f_;
-
-    // =========================================================
-    // FILTER COEFFICIENTS
-    // =========================================================
-    float alpha_v_;
-    float alpha_w_;
 
     // =========================================================
     // UTILITY

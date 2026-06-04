@@ -38,6 +38,27 @@ using std::placeholders::_1;
 #define X5_LT      (1 << 15)
 #define X5_RT      (1 << 16)
 
+// #define B0      (1 << 0)
+// #define B1      (1 << 1)
+// #define B2      (1 << 2)
+// #define B3      (1 << 3)
+// #define B4      (1 << 4)
+// #define B5      (1 << 5)
+// #define B6      (1 << 6)
+// #define B7      (1 << 7)
+// #define B8      (1 << 8)
+// #define B9      (1 << 9)
+// #define B10     (1 << 10)
+// #define B11     (1 << 11)
+// #define A600    (1 << 12)
+// #define A400    (1 << 13)
+// #define Home    (1 << 14)
+// #define chancel (1 << 15)
+// #define A200    (1 << 16)
+// #define Menual  (1 << 17)
+// #define Zone3   (1 << 18)
+// #define Auto    (1 << 19)
+
 class X5LiteNode : public rclcpp::Node
 {
 public:
@@ -105,6 +126,17 @@ private:
             return 0.0;
         return v;
     }
+    uint32_t reverse_21_bits(uint32_t x)
+    {
+        uint32_t y = 0;
+        for (int i = 0; i < 20; i++)
+        {
+            if (x & (1u << i))
+                y |= (1u << (19 - i));
+        }
+        return y;
+    }
+
 
     // =============================
     // Subscriber Callback
@@ -147,8 +179,10 @@ private:
             float rx = deadzone(msg.value("rx", 0.0));
             float ry = deadzone(msg.value("ry", 0.0));
 
-            int btn = msg.value("btn", 0);
-            int btnm = msg.value("btnM", 0);
+            u_int32_t btn = msg.value("btn", 0);
+            u_int32_t btnm = msg.value("btnM", 0);
+            btnm = reverse_21_bits(btnm);
+
 
             // =============================
             // Publish ROS2 Message
@@ -162,23 +196,23 @@ private:
             gp.btn = btn;
             gp.btnm = btnm;
 
-            // gp.a = (btn & X5_A) != 0;
-            // gp.b = (btn & X5_B) != 0;
-            // gp.x = (btn & X5_X) != 0;
-            // gp.y = (btn & X5_Y) != 0;
-            // gp.shere = (btn & X5_SHERE) != 0;
-            // gp.chiken = (btn & X5_CHIKEN) != 0;
-            // gp.menu = (btn & X5_MENU) != 0;
-            // gp.l3 = (btn & X5_L3) != 0;
-            // gp.r3 = (btn & X5_R3) != 0;
-            // gp.lb = (btn & X5_LB) != 0;
-            // gp.rb = (btn & X5_RB) != 0;
-            // gp.up = (btn & X5_UP) != 0;
-            // gp.down = (btn & X5_DOWN) != 0;
-            // gp.left = (btn & X5_LEFT) != 0;
-            // gp.right = (btn & X5_RIGHT) != 0;
-            // gp.lt = (btn & X5_LT) != 0;
-            // gp.rt = (btn & X5_RT) != 0;
+            gp.a = (btn & X5_A) != 0;
+            gp.b = (btn & X5_B) != 0;
+            gp.x = (btn & X5_X) != 0;
+            gp.y = (btn & X5_Y) != 0;
+            gp.shere = (btn & X5_SHERE) != 0;
+            gp.chiken = (btn & X5_CHIKEN) != 0;
+            gp.menu = (btn & X5_MENU) != 0;
+            gp.l3 = (btn & X5_L3) != 0;
+            gp.r3 = (btn & X5_R3) != 0;
+            gp.lb = (btn & X5_LB) != 0;
+            gp.rb = (btn & X5_RB) != 0;
+            gp.up = (btn & X5_UP) != 0;
+            gp.down = (btn & X5_DOWN) != 0;
+            gp.left = (btn & X5_LEFT) != 0;
+            gp.right = (btn & X5_RIGHT) != 0;
+            gp.lt = (btn & X5_LT) != 0;
+            gp.rt = (btn & X5_RT) != 0;
             
 
             cmd_pub_->publish(gp);

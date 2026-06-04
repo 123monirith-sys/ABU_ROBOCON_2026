@@ -1,0 +1,86 @@
+swerve_controller_node:
+  ros__parameters:
+    # Control loop rate
+    rate_hz: 100.0
+
+    # Field-centric mode — set false to pass robot-frame /field_cmd_vel straight through
+    field_centric: true
+
+    # Deadbands (applied to field-frame input before transform)
+    deadband_xy: 0.0          # m/s — translational magnitude threshold
+    deadband_omega: 0.0       # rad/s
+
+    # Slew-rate limits (robot-frame, post-transform)
+    slew_xy: 3.0               # m/s per second
+    slew_omega: 1.5            # rad/s per second
+
+    # Wheel speed desaturation ceiling
+    max_speed_ms: 0.5         # m/s — maximum wheel tangential speed
+
+    # Robot geometry — MUST match ik_node constants
+    wheel_radius: 0.039        # m
+    robot_l: 0.426             # m wheelbase (front-to-back)
+    robot_w: 0.426             # m track width (left-to-right)
+
+    # Heading omega mixing weight (scales /heading_omega before mixing into omega)
+    heading_omega_weight: 0.0
+
+    # Command watchdog — if no /field_cmd_vel arrives within this window,
+    # zero the commanded velocities. Protects against a dead publisher
+    # (e.g. Ctrl-C on `ros2 topic pub`) leaving the last cmd latched.
+    cmd_timeout_s: 0.3
+
+heading_lock_node:
+  ros__parameters:
+    rate_hz: 100.0
+
+    # PID gains
+    kp: 1.0
+    ki: 0.0
+    kd: 0.0
+
+    # Anti-windup: integral output clamp (rad/s)
+    i_clamp: 0.0
+
+    # Output clamp
+    max_omega: 3.0            # rad/s
+
+    # Suppress output when heading error is within this band
+    deadband_deg: 1.0
+
+    # Derivative low-pass filter (0 = heavy filter, 1 = no filter)
+    deriv_alpha: 1.0
+
+odom_node:
+  ros__parameters:
+    rate_hz: 250.0
+
+pos_controller_node:
+  ros__parameters:
+    rate_hz: 100.0
+
+    # Adaptive PD gains by distance
+    kp_xy: 0.7
+    kd_xy: 0.0
+    kp_xy_near: 2.0      # gains used when dist < near_thresh
+    kd_xy_near: 0.0
+    near_thresh: 0.2       # m
+
+    # Heading PD
+    kp_theta: 1.0
+    kd_theta: 0.11
+
+    # Arrival deadband
+    dead_xy: 0.01          # m
+    dead_theta_deg: 1.0    # deg
+
+    # Hysteresis — after arriving, only re-engage if error exceeds these
+    arrive_hold_xy: 0.01           # m
+    arrive_hold_theta_deg: 1.0     # deg
+
+    # Output caps (world pipeline further limits via desaturation)
+    max_v: 0.5           # m/s
+    max_w: 1.5             # rad/s
+
+    # Derivative low-pass (0 = heavy filter, 1 = no filter)
+    deriv_alpha: 1.0

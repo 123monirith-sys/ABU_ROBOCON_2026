@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.8)
 project(robot_pkg)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_STANDARD 20)        # ← add this
+set(CMAKE_CXX_STANDARD_REQUIRED ON) # ← add this
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -24,18 +26,23 @@ add_executable(canrx_node src/canrx_node.cpp)
 add_executable(cantx_node src/cantx_node.cpp)
 add_executable(main_node src/main_node.cpp)
 add_executable(game_pad src/game_pad.cpp)
+add_executable(logData_node src/logData_node.cpp)
 
 # add libraries
 add_library(ekf_lib src/ekf_lib.cpp)
 add_library(trajectory_loader src/trajectory_loader.cpp)
 add_library(pose_control_lib src/pose_control_lib.cpp)
-# add_library(stm32_status src/stm32_status.cpp)
+add_library(laserToworld src/laserToworld.cpp)
+add_library(buttongui_lib
+  src/buttongui_lib.cpp
+)
+add_library(gam_pad_lib src/gam_pad_lib.cpp)   # ← add this
 
-# ament_target_dependencies(stm32_status
-#   std_msgs
-# )
 
-# link dependencies
+ament_target_dependencies(buttongui_lib
+  rclcpp
+  std_msgs
+)
 ament_target_dependencies(canrx_node
   rclcpp
   std_msgs
@@ -69,8 +76,16 @@ ament_target_dependencies(canrx_node
   robot_msg
 )
 
+  ament_target_dependencies(logData_node
+  rclcpp
+  std_msgs
+)
+
 target_link_libraries(game_pad
   jsoncpp
+)
+target_include_directories(buttongui_lib PUBLIC
+  include
 )
 
 install(
@@ -83,10 +98,14 @@ target_link_libraries(main_node
   ekf_lib
   trajectory_loader
   pose_control_lib
+  laserToworld
+  buttongui_lib
+  gam_pad_lib 
   # stm32_status
+
 )
 
-  install(TARGETS
+install(TARGETS
   canrx_node
   cantx_node
   main_node
@@ -94,6 +113,10 @@ target_link_libraries(main_node
   trajectory_loader
   pose_control_lib
   game_pad
+  laserToworld
+  buttongui_lib
+  logData_node
+  gam_pad_lib
   # stm32_status
   DESTINATION lib/${PROJECT_NAME}
   )
@@ -102,6 +125,9 @@ target_link_libraries(main_node
   include/robot_pkg/ekf_lib.hpp
   include/robot_pkg/pose_control_lib.hpp
   include/robot_pkg/trajectory_loader.hpp
+  include/robot_pkg/laserToworld.hpp
+  include/robot_pkg/buttongui_lib.hpp
+  include/robot_pkg/gam_pad_lib.hpp  
   # include/robot_pkg/stm32_status.hpp
   DESTINATION include/${PROJECT_NAME}
   )
