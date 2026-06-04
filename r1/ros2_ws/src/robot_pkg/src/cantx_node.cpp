@@ -1,219 +1,8 @@
-// #include "rclcpp/rclcpp.hpp"
-// #include <geometry_msgs/msg/vector3.hpp>
-// #include "robot_msg/msg/motor.hpp"
-
-// #include <linux/can.h>
-// #include <linux/can/raw.h>
-// #include <net/if.h>
-// #include <sys/socket.h>
-// #include <sys/ioctl.h>
-// #include <unistd.h>
-
-// #include <cstring>
-// #include <mutex>
-// #include <cmath>
-
-
-// using std::placeholders::_1;
-// using namespace std::chrono_literals;
-
-// class CanTxNode : public rclcpp::Node
-// {
-// public:
-//     CanTxNode()
-//     : Node("cantx_node"),
-//       can_socket_(-1),
-//       vx_(0.0f),
-//       vy_(0.0f),
-//       omega_(0.0f),
-//       last_msg_time_(this->now())
-//     {
-//         init_can_bus();
-
-//         sub_ = this->create_subscription<geometry_msgs::msg::Vector3>(
-//             "/cmd_vel_custom", 10,
-//             std::bind(&CanTxNode::cmd_callback, this, std::placeholders::_1));
-//         cmd_motor_sub = this->create_subscription<robot_msg::msg::Motor>("/motor_cmd",10, std::bind(&CanTxNode::motor_callback, this,_1));
-
-
-//         timer_ = this->create_wall_timer(
-//             std::chrono::milliseconds(1),   // 200 Hz
-//             std::bind(&CanTxNode::send_can_loop, this));
-
-//         RCLCPP_INFO(this->get_logger(), "CAN TX Node Started (stable version)");
-//     }
-
-//     ~CanTxNode()
-//     {
-//         if (can_socket_ >= 0)
-//             close(can_socket_);
-//     }
-
-// private:
-//     // ===== CAN =====
-//     int can_socket_;
-
-//     // ===== SHARED STATE =====
-//     float vx_;
-//     float vy_;
-//     float omega_;
-//     int16_t desire_deg =0, desire_pose =0;
-//     u_int8_t sensor1=0.0, sensor2 =0.0, sensor3 =0.0;
-
-//     std::mutex mtx_;
-//     rclcpp::Time last_msg_time_;
-
-//     // ===== ROS =====
-//     rclcpp::TimerBase::SharedPtr timer_;
-//     rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr sub_;
-//     rclcpp::Subscription<robot_msg::msg::Motor>::SharedPtr cmd_motor_sub;
-
-//     // ================== CALLBACK ==================
-//     void cmd_callback(const geometry_msgs::msg::Vector3::SharedPtr msg)
-//     {
-//         std::lock_guard<std::mutex> lock(mtx_);
-
-//         vx_ = sanitize(msg->x);
-//         vy_= sanitize(msg->y);
-//         omega_ = sanitize(msg->z);
-
-//         last_msg_time_ = this->now();
-//     }
-
-//     // ================== SAFE VALUE CHECK ==================
-//     float sanitize(float v)
-//     {
-//         if (std::isnan(v) || std::isinf(v))
-//             return 0.0f;
-//         return v;
-//     }
-
-//     // ================== CAN INIT ==================
-//     void init_can_bus()
-//     {
-//         can_socket_ = socket(PF_CAN, SOCK_RAW, CAN_RAW);
-//         if (can_socket_ < 0)
-//         {
-//             RCLCPP_ERROR(this->get_logger(), "CAN socket failed");
-//             return;
-//         }
-
-//         struct ifreq ifr{};
-//         struct sockaddr_can addr{};
-
-//         std::strncpy(ifr.ifr_name, "can0", IFNAMSIZ - 1);
-//         ioctl(can_socket_, SIOCGIFINDEX, &ifr);
-
-//         addr.can_family = AF_CAN;
-//         addr.can_ifindex = ifr.ifr_ifindex;
-
-//         if (bind(can_socket_, (struct sockaddr *)&addr, sizeof(addr)) < 0)
-//         {
-//             RCLCPP_ERROR(this->get_logger(), "CAN bind failed");
-//             close(can_socket_);
-//             can_socket_ = -1;
-//         }
-//     }
-
-//     // ================== SEND FRAME ==================
-//     void send_can(uint32_t id, const uint8_t *data, uint8_t len)
-//     {
-//         if (can_socket_ < 0)
-//         {
-//             init_can_bus();
-//             return;
-//         }
-
-//         struct can_frame frame{};
-//         frame.can_id = id;
-//         frame.can_dlc = len;
-//         std::memcpy(frame.data, data, len);
-
-//         if (write(can_socket_, &frame, sizeof(frame)) < 0)
-//         {
-//             RCLCPP_ERROR(this->get_logger(), "CAN write failed, reconnecting...");
-//             close(can_socket_);
-//             can_socket_ = -1;
-//             init_can_bus();
-//         }
-//     }
-
-//     // ================== MAIN LOOP ==================
-//     void send_can_loop()
-//     {
-//         float vx, vy, w;
-
-//         // ===== THREAD SAFE COPY =====
-//         {
-//             std::lock_guard<std::mutex> lock(mtx_);
-//             vx = vx_;
-//             vy = vy_;
-//             w  = omega_;
-//         }
-
-//         // ===== TIMEOUT SAFETY (VERY IMPORTANT) =====
-//         // double dt_msg = (this->now() - last_msg_time_).seconds();
-//         // if (dt_msg > 0.1)
-//         // {
-//         //     vx = 0.0f;
-//         //     vy = 0.0f;
-//         //     w  = 0.0f;
-//         // }
-
-//         // ===== REMOVE MICRO NOISE (IMPORTANT FOR JUMP FIX) =====
-//         // if (std::fabs(vx) < 0.001f) vx = 0.0f;
-//         // if (std::fabs(vy) < 0.001f) vy = 0.0f;
-//         // if (std::fabs(w)  < 0.001f) w  = 0.0f;
-
-//         // ===== SAFE SCALING =====
-//         constexpr float SCALE = 1000.0f;
-
-//         int16_t vx_i = static_cast<int16_t>(vx * SCALE);
-//         int16_t vy_i = static_cast<int16_t>(vy * SCALE);
-//         int16_t w_i  = static_cast<int16_t>(w  * SCALE);
-
-//         uint8_t data[8] = {0};
-
-//         std::memcpy(&data[0], &vx_i, 2);
-//         std::memcpy(&data[2], &vy_i, 2);
-//         std::memcpy(&data[4], &w_i,  2);
-//         RCLCPP_INFO(this->get_logger(), "vx = %d , vy = %d , omega=%d",vx_i,vy_i, w_i);
-
-//         send_can(0x500, data, 8);
-//     }
-//     void motor_callback(const robot_msg::msg::Motor::SharedPtr msg){
-//         desire_deg = static_cast<int16_t>(msg->degree);   
-//         desire_pose = static_cast<int16_t>(msg->pose*10000);
-//         sensor1 = static_cast<u_int8_t>(msg->sensor1);
-//         sensor2 = static_cast<u_int8_t>(msg->sensor2);
-//         sensor3 = static_cast<u_int8_t>(msg->sensor3);
-//         uint8_t data[8] = {0};
-    
-//         std::memcpy(&data[0], &desire_deg, 2);
-//         std::memcpy(&data[2], &desire_pose, 2);
-//         data[4] = sensor1;
-//         data[5] = sensor2;
-//         data[6] = sensor3; 
-//         send_can(0x103, data , 8);
-//         //RCLCPP_INFO(this->get_logger(), "Sending motor command: degree=%d, pose=%d, sensor1=%d, sensor2=%d ,sensor3=%d", desire_deg, desire_pose, sensor1, sensor2, sensor3    );
-
-
-//     }
-
-// };
-
-// // ================== MAIN ==================
-// int main(int argc, char *argv[])
-// {
-//     rclcpp::init(argc, argv);
-//     rclcpp::spin(std::make_shared<CanTxNode>());
-//     rclcpp::shutdown();
-//     return 0;
-// }
 #include "rclcpp/rclcpp.hpp"
 
 #include <geometry_msgs/msg/vector3.hpp>
 #include "robot_msg/msg/motor.hpp"
+#include "std_msgs/msg/float32_multi_array.hpp"
 
 #include <linux/can.h>
 #include <linux/can/raw.h>
@@ -225,6 +14,7 @@
 #include <cstring>
 #include <mutex>
 #include <cmath>
+
 
 using std::placeholders::_1;
 using namespace std::chrono_literals;
@@ -255,6 +45,12 @@ public:
             std::bind(&CanTxNode::timer_callback, this));
 
         RCLCPP_INFO(this->get_logger(), "CAN TX NODE STARTED");
+
+
+    ttt_sub_ = this->create_subscription<std_msgs::msg::Float32MultiArray>("/ttt_cmd",10,
+            std::bind(&CanTxNode::ttt_callback, this, _1)
+      );
+
     }
 
     ~CanTxNode()
@@ -279,6 +75,10 @@ private:
     rclcpp::Subscription<robot_msg::msg::Motor>::SharedPtr motor_sub_;
     rclcpp::TimerBase::SharedPtr timer_;
 
+    rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr ttt_sub_;
+
+
+
     // =========================================================
     // SHARED DATA
     // =========================================================
@@ -296,6 +96,15 @@ private:
     uint8_t sensor3_ = 0;
 
     bool motor_updated_ = false;
+
+
+    int16_t ttt_d1_ = 0;
+    int16_t ttt_d2_ = 0;
+    int16_t ttt_d3_ = 0;
+    int16_t ttt_d4_ = 0;
+
+    bool ttt_updated_ = false;
+
 
     // =========================================================
     // SANITIZE
@@ -400,6 +209,28 @@ private:
         motor_updated_ = true;
     }
 
+
+
+    void ttt_callback(const std_msgs::msg::Float32MultiArray::SharedPtr msg)
+    {
+        if(msg->data.size() < 4)
+            return;
+
+        std::lock_guard<std::mutex> lock(mtx_);
+
+    ttt_d1_ = static_cast<int16_t>(msg->data[0] * 100);
+
+    ttt_d2_ = static_cast<int16_t>(msg->data[1] * 100);
+
+    ttt_d3_ = static_cast<int16_t>(msg->data[2] * 100);
+
+    ttt_d4_ = static_cast<int16_t>(msg->data[3] * 100);
+
+    ttt_updated_ = true;
+}
+    
+
+
     // =========================================================
     // TIMER LOOP
     // =========================================================
@@ -412,6 +243,13 @@ private:
         uint8_t s1, s2, s3;
 
         bool send_motor = false;
+
+        bool send_ttt = false;
+
+        int16_t ttt_d1;
+        int16_t ttt_d2;
+        int16_t ttt_d3;
+        int16_t ttt_d4;
 
         // ================= THREAD SAFE COPY =================
         {
@@ -431,12 +269,21 @@ private:
             send_motor = motor_updated_;
 
             motor_updated_ = false;
+
+            ttt_d1 = ttt_d1_;
+            ttt_d2 = ttt_d2_;
+            ttt_d3 = ttt_d3_;
+            ttt_d4 = ttt_d4_;
+            
+            send_ttt = ttt_updated_;
+            ttt_updated_ = false;
+
         }
 
         // ================= SMALL NOISE FILTER =================
-        if (std::fabs(vx) < 0.001f) vx = 0.0f;
-        if (std::fabs(vy) < 0.001f) vy = 0.0f;
-        if (std::fabs(omega) < 0.001f) omega = 0.0f;
+        if (std::fabs(vx) < 0.005f) vx = 0.0f;
+        if (std::fabs(vy) < 0.005f) vy = 0.0f;
+        if (std::fabs(omega) < 0.005f) omega = 0.0f;
 
         // ================= SCALE =================
         constexpr float SCALE = 1000.0f;
@@ -473,16 +320,29 @@ private:
             send_can(0x103, motor_data, 8);
         }
 
+    if(send_ttt)
+    {
+        uint8_t ttt_data[8] = {0};
+
+        std::memcpy(&ttt_data[0], &ttt_d1, 2);
+        std::memcpy(&ttt_data[2], &ttt_d2, 2);
+        std::memcpy(&ttt_data[4], &ttt_d3, 2);
+        std::memcpy(&ttt_data[6], &ttt_d4, 2);
+        send_can(0x300, ttt_data, 8);
+    }
+
+
+
         // // ================= DEBUG =================
-        RCLCPP_INFO_THROTTLE(
-            this->get_logger(),
-            *this->get_clock(),
-            500,
-            "vx=%d vy=%d omega=%d",
-            vx_i,
-            vy_i,
-            omega_i
-        );
+        // RCLCPP_INFO_THROTTLE(
+        //     this->get_logger(),
+        //     *this->get_clock(),
+        //     500,
+        //     "vx=%d vy=%d omega=%d",
+        //     vx_i,
+        //     vy_i,
+        //     omega_i
+        // );
     }
 };
 

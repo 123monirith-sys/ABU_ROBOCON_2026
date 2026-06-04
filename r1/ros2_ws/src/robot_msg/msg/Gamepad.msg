@@ -3,7 +3,7 @@ int8 ry
 int8 lx
 int8 ly
 uint32 btn
-uint16 btnm
+uint32 btnm
 
 bool a
 bool b

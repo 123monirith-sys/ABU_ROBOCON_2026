@@ -24,21 +24,13 @@ PoseControl::PoseControl()
 
     // ===== Limits =====
     max_v_ = 1.0f;
-    max_w_ = 3.14f;
+    max_w_ = 0.75f;
 
     // ===== Previous Errors =====
     ex_prev_ = 0.0f;
     ey_prev_ = 0.0f;
     et_prev_ = 0.0f;
 
-    // ===== Velocity Filters =====
-    vx_f_ = 0.0f;
-    vy_f_ = 0.0f;
-    w_f_  = 0.0f;
-
-    // ===== Filter Coefficients =====
-    alpha_v_ = 0.2f;
-    alpha_w_ = 0.2f;
 }
 
 void PoseControl::setReference(float x, float y, float yaw_rad)
@@ -83,13 +75,13 @@ void PoseControl::computeControl(float X,
     float dey = (ey - ey_prev_) / dt;
 
     // HEADING ERROR
-    float etheta = wrapAngle(yaw_ref_  - theta);
-    float det    = (etheta - et_prev_) / dt;
+    float etheta = wrapAngle(yaw_ref_ - theta);
+    float det = (etheta - et_prev_) / dt;
 
     // PD FEEDBACK
     float vx_pid = Kpx_ * ex + Kdx_ * dex;
     float vy_pid = Kpy_ * ey + Kdy_ * dey;
-    float w_pid  = Kpt_ * etheta + Kdt_ * det;
+    float w_pid = Kpt_ * etheta + Kdt_ * det;
 
     // FEEDFORWARD + FEEDBACK
     float vx_w = vx_traj + vx_pid;
@@ -114,25 +106,13 @@ void PoseControl::computeControl(float X,
         omega = 0.0f;
     }
 
-    // LOW PASS FILTER
-    vx_f_ = alpha_v_ * vx_r + (1.0f - alpha_v_) * vx_f_;
-
-    vy_f_ = alpha_v_ * vy_r + (1.0f - alpha_v_) * vy_f_;
-
-    // w_f_ = alpha_w_ * omega + (1.0f - alpha_w_) * w_f_;
-
     // SATURATION
-    vx_f_ = std::max(-max_v_, std::min(max_v_, vx_f_));
-
-    vy_f_ = std::max(-max_v_, std::min(max_v_, vy_f_));
+    vx_r = std::max(-max_v_, std::min(max_v_, vx_r));
+    vy_r = std::max(-max_v_, std::min(max_v_, vy_r));
     omega = std::max(-max_w_, std::min(max_w_, omega));
 
-    // w_f_ = std::max(-max_w_, std::min(max_w_, w_f_));
-
     // OUTPUT
-    vx_r = vx_f_;
-    vy_r = vy_f_;
-    omega = omega;
+    // vx_r, vy_r, omega are already set with saturation
 
     // SAVE PREVIOUS
     ex_prev_ = ex;
@@ -147,7 +127,7 @@ float PoseControl::headingControl(float theta_ref,
     if (dt < 1e-4f)
         dt = 1e-4f;
 
-    float Kpt = 3.0f;
+    float Kpt = 1.0f;
     float Kdt = 0.3f;
 
     static float ew_prev = 0.0f;
@@ -164,17 +144,21 @@ float PoseControl::headingControl(float theta_ref,
         w_out = 0.0f;
     }
 
-    // ===== Filter =====
-    static float w_filter = 0.0f;
-
-    w_filter = alpha_w_ * w_out +
-               (1.0f - alpha_w_) * w_filter;
-
     // ===== Saturation =====
-    w_filter = std::max(-max_w_,
-                        std::min(max_w_, w_filter));
+    float w_out_sat = std::max(-max_w_, std::min(max_w_, w_out));
 
     ew_prev = ew;
 
-    return w_filter;
+    return w_out_sat;
+}
+
+float wrapAngle(float angle)
+{
+    while (angle > 2 * M_PI)
+        angle -= 2.0f * M_PI;
+
+    while (angle < -2 * M_PI)
+        angle += 2.0f * M_PI;
+
+    return angle;
 }

@@ -23,7 +23,7 @@ def generate_launch_description():
         ),
         Node(
             package='robot_pkg',
-            executable='gamepad_node',
-            name='gamepad_node'
+            executable='game_pad',
+            name='game_pad'
         )
     ])
